@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0D12">
+<title>Калькулятор дохода APEX</title>
+<meta name="description" content="Калькулятор по реальной статистике счёта APEX: плохая серия, средний и хороший результат, шанс потерять депозит.">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#0A0D12;color:#E6EDF3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;-webkit-text-size-adjust:100%;overflow-x:hidden}
+  body{min-height:100vh;background:
+    radial-gradient(600px 400px at 85% -10%,rgba(16,185,129,.18),transparent 60%),
+    radial-gradient(500px 380px at -10% 40%,rgba(16,185,129,.08),transparent 60%),#0A0D12}
+  .wrap{max-width:460px;margin:0 auto;padding:20px 16px calc(28px + env(safe-area-inset-bottom))}
+  header{text-align:center;margin:6px 0 18px}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.14em;font-size:13px;color:#10B981;text-transform:uppercase}
+  .logo i{width:8px;height:8px;border-radius:50%;background:#10B981;box-shadow:0 0 10px #10B981}
+  h1{font-size:24px;font-weight:800;margin-top:6px;letter-spacing:-.01em}
+  .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:16px;margin-bottom:12px;
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .label{font-size:13px;font-weight:600;color:#9AA7B4;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+  .label b{color:#E6EDF3;font-size:18px;text-transform:none;letter-spacing:0}
+  .money{display:flex;align-items:center;background:rgba(0,0,0,.35);border:1px solid rgba(16,185,129,.35);border-radius:14px;padding:4px 14px}
+  .money span{font-size:30px;font-weight:700;color:#10B981;margin-right:4px}
+  .money input{flex:1;min-width:0;width:100%;background:transparent;border:0;outline:0;color:#fff;font-size:34px;font-weight:800;padding:8px 0;font-family:inherit}
+  .money.sm span{font-size:22px}.money.sm input{font-size:24px;padding:6px 0}
+  .money:focus-within{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}
+  .quick{display:grid;grid-template-columns:1fr 1fr 1fr 1.5fr;gap:8px;margin-top:10px}
+  .quick button{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#E6EDF3;border-radius:12px;padding:11px 4px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .quick button.vip{color:#F5D27A;border-color:rgba(245,210,122,.4)}
+  .quick button.on{background:rgba(16,185,129,.16);border-color:#10B981;color:#fff}
+  .hint{font-size:13px;color:#8B98A5;margin-top:8px;line-height:1.4}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:10px;outline:0;margin:14px 0 6px;
+    background:linear-gradient(90deg,#10B981 var(--p,10%),rgba(255,255,255,.1) var(--p,10%))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:#fff;border:4px solid #10B981;box-shadow:0 0 14px rgba(16,185,129,.7);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:4px solid #10B981;box-shadow:0 0 14px rgba(16,185,129,.7);cursor:pointer}
+  .edges{display:flex;justify-content:space-between;font-size:13px;color:#8B98A5}
+  .result{text-align:center;padding:20px 16px;border-color:rgba(16,185,129,.3);background:linear-gradient(180deg,rgba(16,185,129,.09),rgba(255,255,255,.03))}
+  .result .label{justify-content:center}
+  .big{font-size:58px;font-weight:900;line-height:1.05;letter-spacing:-.02em;
+    background:linear-gradient(90deg,#F5D27A,#34D399 60%,#10B981);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 18px rgba(16,185,129,.45));word-break:break-all}
+  .profit{margin-top:6px;font-size:18px;font-weight:700;color:#10B981}
+  .profit.neg{color:#C9D1D9}
+  .sub{font-size:12px;color:#8B98A5;margin-top:4px}
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+  .trio div{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 4px}
+  .trio small{display:block;font-size:11.5px;color:#9AA7B4;margin-bottom:4px}
+  .trio strong{font-size:18px;font-weight:800}
+  .trio .bad strong{color:#F87171}.trio .mid strong{color:#E6EDF3}.trio .good strong{color:#34D399}
+  .bust{margin-top:14px;font-size:15px;font-weight:600;color:#FCA5A5}
+  .bust b{color:#F87171}
+  .basis{font-size:13px;line-height:1.5;color:#B4C0CC;margin:4px 4px 16px;text-align:center}
+  .cta{display:flex;flex-direction:column;gap:10px}
+  .cta a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;border-radius:16px;font-size:17px;font-weight:800;text-decoration:none;color:#fff;transition:transform .12s}
+  .cta a:active{transform:scale(.98)}
+  .btn-main{background:linear-gradient(135deg,#10B981,#22D3EE 55%,#A3E635);color:#05140F!important;box-shadow:0 10px 30px rgba(16,185,129,.45)}
+  .btn-out{border:1.5px solid #10B981;background:rgba(16,185,129,.06);color:#6EE7B7!important}
+  .btn-yt{background:rgba(239,68,68,.12);border:1.5px solid #EF4444;color:#FCA5A5!important}
+  .shield{display:block;text-align:center;margin-top:18px;font-size:13px;color:rgba(230,237,243,.5);text-decoration:none}
+  .shield:hover{color:#10B981}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><i></i>APEX</div>
+    <h1>Калькулятор дохода</h1>
+  </header>
+
+  <section class="card">
+    <div class="label">Начальная сумма</div>
+    <div class="money"><span>$</span><input id="start" type="number" inputmode="numeric" min="1" step="1" value="20" aria-label="Начальная сумма"></div>
+    <div class="quick" id="quick">
+      <button data-v="20">$20</button>
+      <button data-v="50">$50</button>
+      <button data-v="100">$100</button>
+      <button data-v="1000" class="vip">$1000+ VIP</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="label">Ставка за сделку</div>
+    <div class="money sm"><span>$</span><input id="stake" type="number" inputmode="numeric" min="1" step="1" value="1" aria-label="Ставка за сделку"></div>
+    <div class="hint" id="stakeHint">Рекомендуем 1–2% от суммы. Минимум $1.</div>
+  </section>
+
+  <section class="card">
+    <div class="label">Количество сделок <b id="tradesVal">30</b></div>
+    <input id="trades" type="range" min="1" max="300" step="1" value="30" aria-label="Количество сделок">
+    <div class="edges"><span>1</span><span>300</span></div>
+  </section>
+
+  <section class="card result">
+    <div class="label">Сколько можно заработать</div>
+    <div class="big" id="median">$0</div>
+    <div class="profit" id="profit">Чистая прибыль: +$0</div>
+    <div class="sub">средний (медианный) итог из 5000 симуляций</div>
+    <div class="trio">
+      <div class="bad"><small>Плохая серия</small><strong id="p10">$0</strong></div>
+      <div class="mid"><small>В среднем</small><strong id="p50">$0</strong></div>
+      <div class="good"><small>Хорошая серия</small><strong id="p90">$0</strong></div>
+    </div>
+    <div class="bust">Шанс потерять депозит: <b id="bust">0%</b></div>
+  </section>
+
+  <p class="basis" id="basis"></p>
+
+  <nav class="cta">
+    <a class="btn-main" href="https://t.me/ApexBinaryRobot?start=telegram" target="_blank" rel="noopener">🚀 Запустить APEX ИИ</a>
+    <a class="btn-out" href="https://t.me/+S9Fucx4xaQBhMzcy" target="_blank" rel="noopener">📢 Открытый ТГ-канал</a>
+    <a class="btn-yt" href="https://youtube.com/@kymvards?si=ebXKmlDOFQXoKC16" target="_blank" rel="noopener">▶️ YouTube</a>
+  </nav>
+  <a class="shield" href="https://aisoyuz2025-bit.github.io/" target="_blank" rel="noopener">🛡️ Рассчитать защиту депозита</a>
+</div>
+
+<script>
+/* =====================================================================
+   НАСТРОЙКИ СТАТИСТИКИ — ОБНОВЛЯТЬ РАЗ В НЕДЕЛЮ
+   Меняйте только числа ниже (данные с реального счёта):
+   asOf      — дата статистики (текст в кавычках)
+   trades    — всего сделок
+   winRate   — доля прибыльных сделок (0.75 = 75%)
+   payout    — выплата за прибыльную сделку (0.92 = 92%)
+   turnover  — общий оборот, $
+   profit    — общая прибыль, $
+   minTrade  — минимальная сделка, $
+   maxTrade  — максимальная сделка, $
+   maxProfit — самая прибыльная сделка, $
+   ===================================================================== */
+var STATS = {
+  asOf: '21.11.2026',
+  trades: 69,
+  winRate: 0.75,
+  payout: 0.92,
+  turnover: 5199.38,
+  profit: 836.70,
+  minTrade: 1,
+  maxTrade: 1000,
+  maxProfit: 817.88
+};
+/* ===================== КОНЕЦ НАСТРОЕК ===================== */
+
+var RUNS = 5000;      // число симуляций
+var SEED = 20251121;  // фиксированное зерно: цифры не «прыгают»
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+function defaultStake(start){
+  var s = Math.max(1, Math.round(start * 0.02));
+  return Math.max(1, Math.min(s, Math.floor(start)));
+}
+
+function simulate(start, stake, trades, S, runs){
+  S = S || STATS; runs = runs || RUNS;
+  var rnd = mulberry32(SEED), finals = new Float64Array(runs), busts = 0;
+  var win = stake * S.payout;
+  for (var r = 0; r < runs; r++){
+    var b = start;
+    for (var t = 0; t < trades; t++){
+      if (b < stake){ break; }
+      b += (rnd() < S.winRate) ? win : -stake;
+    }
+    if (b < stake) busts++;
+    finals[r] = b;
+  }
+  finals.sort();
+  function pct(p){ return finals[Math.min(runs - 1, Math.floor(p * (runs - 1)))]; }
+  return { p10: pct(0.10), median: pct(0.50), p90: pct(0.90), bust: busts / runs,
+           ev: stake * (S.winRate * S.payout - (1 - S.winRate)) };
+}
+
+if (typeof module !== 'undefined') module.exports = { STATS: STATS, simulate: simulate, defaultStake: defaultStake };
+
+if (typeof document !== 'undefined') (function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var elStart = $('start'), elStake = $('stake'), elTrades = $('trades');
+  var KEY = 'apexCalc.v1';
+  var shown = {};
+
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify({ start: elStart.value, stake: elStake.value, trades: elTrades.value })); } catch(e){} }
+  function fmt(n){ return '$' + Math.round(n).toLocaleString('ru-RU'); }
+
+  function animate(el, key, target, render){
+    var from = shown[key] == null ? target : shown[key];
+    shown[key] = target;
+    var t0 = performance.now(), dur = 450;
+    if (el._raf) cancelAnimationFrame(el._raf);
+    (function step(now){
+      var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      render(from + (target - from) * e);
+      if (k < 1) el._raf = requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function readStart(){ var v = Math.floor(Number(elStart.value)); return isFinite(v) && v >= 1 ? v : 1; }
+  function readStake(start){ var v = Math.floor(Number(elStake.value)); if (!isFinite(v) || v < 1) v = 1; return Math.min(v, start); }
+
+  function paintSlider(){ var p = (elTrades.value - 1) / 299 * 100; elTrades.style.setProperty('--p', p + '%'); $('tradesVal').textContent = elTrades.value; }
+  function markQuick(start){ [].forEach.call(document.querySelectorAll('#quick button'), function(b){ b.classList.toggle('on', Number(b.dataset.v) === start); }); }
+
+  var pending = false, cache = {};
+  function recalc(){
+    if (pending) return; pending = true;
+    requestAnimationFrame(function(){
+      pending = false;
+      var start = readStart(), stake = readStake(start), trades = Number(elTrades.value);
+      $('stakeHint').textContent = 'Рекомендуем 1–2% от суммы (' + fmt(defaultStake(start)) + '). Минимум $1, максимум ' + fmt(start) + '.';
+      var ck = start + '|' + stake + '|' + trades, r = cache[ck] || (cache[ck] = simulate(start, stake, trades));
+      var med = Math.round(r.median), prof = med - start;
+      animate($('median'), 'med', med, function(v){ $('median').textContent = fmt(v); });
+      animate($('profit'), 'prof', prof, function(v){
+        var n = Math.round(v);
+        $('profit').textContent = 'Чистая прибыль: ' + (n >= 0 ? '+' : '−') + fmt(Math.abs(n));
+      });
+      $('profit').classList.toggle('neg', prof < 0);
+      animate($('p10'), 'p10', r.p10, function(v){ $('p10').textContent = fmt(v); });
+      animate($('p50'), 'p50', r.median, function(v){ $('p50').textContent = fmt(v); });
+      animate($('p90'), 'p90', r.p90, function(v){ $('p90').textContent = fmt(v); });
+      var bp = r.bust * 100;
+      $('bust').textContent = (bp > 0 && bp < 1 ? '<1' : Math.round(bp)) + '%';
+      markQuick(start);
+      save();
+    });
+  }
+
+  $('basis').textContent = 'Расчёт по реальной статистике счёта на ' + STATS.asOf + ': ' + STATS.trades + ' сделок, ' +
+    Math.round(STATS.winRate * 100) + '% прибыльных, выплата ' + Math.round(STATS.payout * 100) +
+    '%. Прошлые результаты не гарантируют будущих, торговля может привести к потере всего депозита.';
+
+  var st = load();
+  if (st.start) elStart.value = Math.max(1, Math.floor(Number(st.start)) || 20);
+  elStake.value = st.stake ? Math.max(1, Math.floor(Number(st.stake)) || 1) : defaultStake(readStart());
+  if (st.trades) elTrades.value = Math.min(300, Math.max(1, Number(st.trades) || 30));
+
+  function onStartChange(){ elStake.value = defaultStake(readStart()); recalc(); }
+  elStart.addEventListener('input', onStartChange);
+  elStart.addEventListener('blur', function(){ elStart.value = readStart(); recalc(); });
+  elStake.addEventListener('input', recalc);
+  elStake.addEventListener('blur', function(){ elStake.value = readStake(readStart()); recalc(); });
+  elTrades.addEventListener('input', function(){ paintSlider(); recalc(); });
+  document.getElementById('quick').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    elStart.value = b.dataset.v; onStartChange();
+  });
+  paintSlider(); recalc();
+})();
+</script>
+</body>
+</html>
