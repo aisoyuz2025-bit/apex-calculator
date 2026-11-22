@@ -60,6 +60,18 @@
   .btn-yt{background:rgba(239,68,68,.12);border:1.5px solid #EF4444;color:#FCA5A5!important}
   .shield{display:block;text-align:center;margin-top:18px;font-size:13px;color:rgba(230,237,243,.5);text-decoration:none}
   .shield:hover{color:#10B981}
+  .periods{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:4px}
+  .periods button{background:transparent;border:0;color:#9AA7B4;border-radius:12px;padding:11px 4px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+  .periods button.on{background:rgba(16,185,129,.16);color:#fff;box-shadow:inset 0 0 0 1.5px #10B981}
+  .periods button:disabled{opacity:.38;cursor:not-allowed}
+  .stats-range{font-size:13px;color:#8B98A5;text-align:center;margin:-2px 0 12px;line-height:1.4}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stats-grid div{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 8px}
+  .stats-grid small{display:block;font-size:11.5px;color:#9AA7B4;margin-bottom:4px}
+  .stats-grid strong{font-size:16px;font-weight:800}
+  .sample-note{font-size:13px;color:#F5D27A;margin-top:12px;text-align:center;line-height:1.4}
+  .empty-msg{font-size:15px;color:#B4C0CC;text-align:center;padding:8px 4px;line-height:1.45}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -69,6 +81,26 @@
     <h1>Калькулятор дохода</h1>
   </header>
 
+  <nav class="periods" id="periods" role="tablist" aria-label="Период статистики">
+    <button type="button" role="tab" data-period="day" aria-selected="false">Сегодня</button>
+    <button type="button" role="tab" data-period="week" aria-selected="false">Неделя</button>
+    <button type="button" role="tab" data-period="month" aria-selected="true">Месяц</button>
+  </nav>
+
+  <section class="card" id="statsCard">
+    <div class="label">Реальная статистика</div>
+    <div class="stats-range" id="statsRange"></div>
+    <div class="stats-grid" id="statsGrid">
+      <div><small>Сделок</small><strong id="stTrades">—</strong></div>
+      <div><small>Прибыльных</small><strong id="stWin">—</strong></div>
+      <div><small>Оборот</small><strong id="stTurnover">—</strong></div>
+      <div><small>Прибыль</small><strong id="stProfit">—</strong></div>
+    </div>
+    <p class="sample-note hidden" id="sampleNote">Мало сделок — результат может сильно отличаться</p>
+    <p class="empty-msg hidden" id="emptyMsg">Статистика за этот период появится скоро</p>
+  </section>
+
+  <div id="calcBlock">
   <section class="card">
     <div class="label">Начальная сумма</div>
     <div class="money"><span>$</span><input id="start" type="number" inputmode="numeric" min="1" step="1" value="20" aria-label="Начальная сумма"></div>
@@ -104,6 +136,7 @@
     </div>
     <div class="bust">Шанс потерять депозит: <b id="bust">0%</b></div>
   </section>
+  </div>
 
   <p class="basis" id="basis"></p>
 
@@ -117,33 +150,36 @@
 
 <script>
 /* =====================================================================
-   НАСТРОЙКИ СТАТИСТИКИ — ОБНОВЛЯТЬ РАЗ В НЕДЕЛЮ
-   Меняйте только числа ниже (данные с реального счёта):
-   asOf      — дата статистики (текст в кавычках)
-   trades    — всего сделок
-   winRate   — доля прибыльных сделок (0.75 = 75%)
-   payout    — выплата за прибыльную сделку (0.92 = 92%)
-   turnover  — общий оборот, $
-   profit    — общая прибыль, $
+   ЖУРНАЛ СТАТИСТИКИ
+   Чтобы обновить калькулятор, добавьте в конец DAILY_LOG одну новую
+   строку за день. Вкладки «Сегодня / Неделя / Месяц» пересчитаются сами:
+     Сегодня — последняя дата в журнале,
+     Неделя  — все записи за 7 дней до последней даты,
+     Месяц   — все записи за 30 дней до последней даты.
+   Если дата уже есть, новая запись с той же датой заменит старую.
+   date      — дата дня (ДД.ММ.ГГГГ)
+   trades    — число сделок за день
+   wins      — число прибыльных сделок
+   turnover  — оборот, $
+   profit    — прибыль, $
    minTrade  — минимальная сделка, $
    maxTrade  — максимальная сделка, $
    maxProfit — самая прибыльная сделка, $
+   note      — необязательная пометка
    ===================================================================== */
-var STATS = {
-  asOf: '21.11.2026',
-  trades: 69,
-  winRate: 0.75,
-  payout: 0.92,
-  turnover: 5199.38,
-  profit: 836.70,
-  minTrade: 1,
-  maxTrade: 1000,
-  maxProfit: 817.88
-};
+var DAILY_LOG = [
+  { date: '21.11.2026', trades: 69, wins: 52, turnover: 5199.38, profit: 836.70, minTrade: 1, maxTrade: 1000, maxProfit: 817.88, note: 'накопленная статистика до 21.11' },
+  { date: '23.11.2026', trades: 4, wins: 4, turnover: 200, profit: 183, minTrade: 50, maxTrade: 50, maxProfit: 46 }
+];
+var PAYOUT = 0.92;
 /* ===================== КОНЕЦ НАСТРОЕК ===================== */
 
 var RUNS = 5000;      // число симуляций
 var SEED = 20251121;  // фиксированное зерно: цифры не «прыгают»
+var PERIOD_WINDOW = { day: 1, week: 7, month: 30 };
+var PERIOD_LABEL = { day: 'сегодня', week: 'неделю', month: 'месяц' };
+var SMALL_SAMPLE = 20;
+var SMALL_NOTE = 'Мало сделок — результат может сильно отличаться';
 
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 
@@ -152,8 +188,82 @@ function defaultStake(start){
   return Math.max(1, Math.min(s, Math.floor(start)));
 }
 
+function parseDate(s){
+  var p = String(s).split('.');
+  return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+}
+
+function daysBetween(from, to){
+  return Math.round((to - from) / 86400000);
+}
+
+function daysWord(n){
+  var n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return 'день';
+  if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return 'дня';
+  return 'дней';
+}
+
+// Поздняя запись с той же датой заменяет раннюю; затем сортировка по дате.
+function normalizeLog(log){
+  var map = {};
+  log = log || DAILY_LOG;
+  for (var i = 0; i < log.length; i++) map[log[i].date] = log[i];
+  var dates = Object.keys(map);
+  dates.sort(function(a, b){ return parseDate(a) - parseDate(b); });
+  return dates.map(function(d){ return map[d]; });
+}
+
+function aggregate(entries){
+  if (!entries || !entries.length) return null;
+  var trades = 0, wins = 0, turnover = 0, profit = 0;
+  var minTrade = Infinity, maxTrade = -Infinity, maxProfit = -Infinity;
+  for (var i = 0; i < entries.length; i++){
+    var e = entries[i];
+    trades += e.trades;
+    wins += e.wins;
+    turnover += e.turnover;
+    profit += e.profit;
+    if (e.minTrade < minTrade) minTrade = e.minTrade;
+    if (e.maxTrade > maxTrade) maxTrade = e.maxTrade;
+    if (e.maxProfit > maxProfit) maxProfit = e.maxProfit;
+  }
+  return {
+    from: entries[0].date,
+    to: entries[entries.length - 1].date,
+    days: entries.length,
+    trades: trades,
+    wins: wins,
+    winRate: trades ? wins / trades : 0,
+    payout: PAYOUT,
+    turnover: turnover,
+    profit: profit,
+    minTrade: minTrade,
+    maxTrade: maxTrade,
+    maxProfit: maxProfit
+  };
+}
+
+function periodEntries(period, log){
+  var list = normalizeLog(log);
+  if (!list.length) return [];
+  if (period === 'day') return [list[list.length - 1]];
+  var latest = parseDate(list[list.length - 1].date);
+  var window = PERIOD_WINDOW[period] || PERIOD_WINDOW.month;
+  var out = [];
+  for (var i = 0; i < list.length; i++){
+    var diff = daysBetween(parseDate(list[i].date), latest);
+    if (diff >= 0 && diff < window) out.push(list[i]);
+  }
+  return out;
+}
+
+function getPeriod(period, log){
+  return aggregate(periodEntries(period, log));
+}
+
 function simulate(start, stake, trades, S, runs){
-  S = S || STATS; runs = runs || RUNS;
+  S = S || getPeriod('month'); runs = runs || RUNS;
   var rnd = mulberry32(SEED), finals = new Float64Array(runs), busts = 0;
   var win = stake * S.payout;
   for (var r = 0; r < runs; r++){
@@ -171,17 +281,37 @@ function simulate(start, stake, trades, S, runs){
            ev: stake * (S.winRate * S.payout - (1 - S.winRate)) };
 }
 
-if (typeof module !== 'undefined') module.exports = { STATS: STATS, simulate: simulate, defaultStake: defaultStake };
+if (typeof module !== 'undefined') module.exports = {
+  DAILY_LOG: DAILY_LOG, PAYOUT: PAYOUT, simulate: simulate, defaultStake: defaultStake,
+  getPeriod: getPeriod, periodEntries: periodEntries, normalizeLog: normalizeLog,
+  aggregate: aggregate, parseDate: parseDate
+};
 
 if (typeof document !== 'undefined') (function(){
   var $ = function(id){ return document.getElementById(id); };
   var elStart = $('start'), elStake = $('stake'), elTrades = $('trades');
   var KEY = 'apexCalc.v1';
   var shown = {};
+  var period = 'month';
 
   function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
-  function save(){ try { localStorage.setItem(KEY, JSON.stringify({ start: elStart.value, stake: elStake.value, trades: elTrades.value })); } catch(e){} }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify({ start: elStart.value, stake: elStake.value, trades: elTrades.value, period: period })); } catch(e){} }
   function fmt(n){ return '$' + Math.round(n).toLocaleString('ru-RU'); }
+  function fmtMoney(n){
+    var abs = Math.abs(n);
+    var s = abs.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (n < 0 ? '−$' : '$') + s;
+  }
+  function fmtPct(r){
+    var p = r * 100;
+    if (Math.abs(p - Math.round(p)) < 0.05) return Math.round(p) + '%';
+    return p.toFixed(1).replace('.', ',') + '%';
+  }
+  function rangeText(S){
+    if (!S) return '';
+    var range = S.from === S.to ? S.from : (S.from + ' — ' + S.to);
+    return range + ' · ' + S.days + ' ' + daysWord(S.days);
+  }
 
   function animate(el, key, target, render){
     var from = shown[key] == null ? target : shown[key];
@@ -201,14 +331,53 @@ if (typeof document !== 'undefined') (function(){
   function paintSlider(){ var p = (elTrades.value - 1) / 299 * 100; elTrades.style.setProperty('--p', p + '%'); $('tradesVal').textContent = elTrades.value; }
   function markQuick(start){ [].forEach.call(document.querySelectorAll('#quick button'), function(b){ b.classList.toggle('on', Number(b.dataset.v) === start); }); }
 
+  function paintTabs(){
+    [].forEach.call(document.querySelectorAll('#periods button'), function(b){
+      var p = b.dataset.period;
+      var has = !!getPeriod(p);
+      b.disabled = !has;
+      b.classList.toggle('on', p === period && has);
+      b.setAttribute('aria-selected', p === period && has ? 'true' : 'false');
+    });
+  }
+
+  function paintStats(S){
+    var empty = !S;
+    $('statsGrid').classList.toggle('hidden', empty);
+    $('emptyMsg').classList.toggle('hidden', !empty);
+    $('emptyMsg').textContent = 'Статистика за ' + (PERIOD_LABEL[period] || 'этот период') + ' появится скоро';
+    $('calcBlock').classList.toggle('hidden', empty);
+    if (empty){
+      $('statsRange').textContent = '';
+      $('sampleNote').classList.add('hidden');
+      $('basis').textContent = 'Прошлые результаты не гарантируют будущих, торговля может привести к потере всего депозита.';
+      return;
+    }
+    $('statsRange').textContent = rangeText(S);
+    $('stTrades').textContent = String(S.trades);
+    $('stWin').textContent = fmtPct(S.winRate);
+    $('stTurnover').textContent = fmtMoney(S.turnover);
+    $('stProfit').textContent = (S.profit >= 0 ? '+' : '') + fmtMoney(S.profit);
+    var small = S.trades < SMALL_SAMPLE;
+    $('sampleNote').classList.toggle('hidden', !small);
+    $('basis').textContent = 'Расчёт по реальной статистике счёта за ' + rangeText(S) + ': ' + S.trades + ' сделок, ' +
+      fmtPct(S.winRate) + ' прибыльных, выплата ' + Math.round(S.payout * 100) +
+      '%. Прошлые результаты не гарантируют будущих, торговля может привести к потере всего депозита.' +
+      (small ? ' ' + SMALL_NOTE + '.' : '');
+  }
+
   var pending = false, cache = {};
   function recalc(){
     if (pending) return; pending = true;
     requestAnimationFrame(function(){
       pending = false;
+      var S = getPeriod(period);
+      paintTabs();
+      paintStats(S);
+      if (!S){ save(); return; }
       var start = readStart(), stake = readStake(start), trades = Number(elTrades.value);
       $('stakeHint').textContent = 'Рекомендуем 1–2% от суммы (' + fmt(defaultStake(start)) + '). Минимум $1, максимум ' + fmt(start) + '.';
-      var ck = start + '|' + stake + '|' + trades, r = cache[ck] || (cache[ck] = simulate(start, stake, trades));
+      var ck = period + '|' + start + '|' + stake + '|' + trades, r = cache[ck] || (cache[ck] = simulate(start, stake, trades, S));
       var med = Math.round(r.median), prof = med - start;
       animate($('median'), 'med', med, function(v){ $('median').textContent = fmt(v); });
       animate($('profit'), 'prof', prof, function(v){
@@ -226,11 +395,9 @@ if (typeof document !== 'undefined') (function(){
     });
   }
 
-  $('basis').textContent = 'Расчёт по реальной статистике счёта на ' + STATS.asOf + ': ' + STATS.trades + ' сделок, ' +
-    Math.round(STATS.winRate * 100) + '% прибыльных, выплата ' + Math.round(STATS.payout * 100) +
-    '%. Прошлые результаты не гарантируют будущих, торговля может привести к потере всего депозита.';
-
   var st = load();
+  if (st.period === 'day' || st.period === 'week' || st.period === 'month') period = st.period;
+  if (!getPeriod(period)) period = 'month';
   if (st.start) elStart.value = Math.max(1, Math.floor(Number(st.start)) || 20);
   elStake.value = st.stake ? Math.max(1, Math.floor(Number(st.stake)) || 1) : defaultStake(readStart());
   if (st.trades) elTrades.value = Math.min(300, Math.max(1, Number(st.trades) || 30));
@@ -244,6 +411,11 @@ if (typeof document !== 'undefined') (function(){
   document.getElementById('quick').addEventListener('click', function(e){
     var b = e.target.closest('button'); if (!b) return;
     elStart.value = b.dataset.v; onStartChange();
+  });
+  document.getElementById('periods').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b || b.disabled) return;
+    period = b.dataset.period;
+    recalc();
   });
   paintSlider(); recalc();
 })();
